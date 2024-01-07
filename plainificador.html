@@ -51,16 +51,8 @@
       </div>
 </body>
 <script>
-    function cambiarOpcion() {
-    var seleccion = document.getElementById("tipo");
-    var opcionSeleccionada = seleccion.options[seleccion.selectedIndex].value;
 
-    if (opcionSeleccionada === 'FCFS') {FCFS();} else if (opcionSeleccionada === 'SJF') {SJF();}
-}
-
-var tabla=document.getElementById('contenedor'), contenido = "", id_tabla = 0;
-
-
+// Definición de la clase Proceso
 class Proceso {
   constructor(id_, nombre_, TLL_, T_) {
     this.id = id_;
@@ -70,7 +62,329 @@ class Proceso {
   }
 }
 
-var procesos=[]; 
+var procesos = []; // Arreglo para almacenar los procesos
+
+// Función para llenar el arreglo 'procesos' con los valores de los campos de entrada
+function llenar() {
+    procesos.splice(0, procesos.length); // Vacía el arreglo antes de llenarlo nuevamente
+    
+    // Recorre los elementos de entrada para obtener los valores y crear nuevos objetos Proceso
+    for (var i = 1; i <= id_tabla; i++) {
+        var nombre = document.getElementById("nombre" + i + "").value;
+        var t_llegada = parseInt(document.getElementById("TLL" + i + "").value);
+        var tiempo = parseInt(document.getElementById("T" + i + "").value);
+        var nuevoProceso = new Proceso(i, nombre, t_llegada, tiempo);
+        procesos.push(nuevoProceso); // Agrega el nuevo proceso al arreglo 'procesos'
+    }
+    
+    // Imprime en la consola la información de los procesos almacenados
+    procesos.forEach(proceso => {
+        console.log(`id: ${proceso.id}, Nombre: ${proceso.nombre}, TLL: ${proceso.TLL}, T: ${proceso.T}`);
+    });
+}
+
+// Función para agregar un nuevo proceso a la tabla y actualizar la interfaz
+function agregar() {
+    var nombre = document.getElementById("nombre").value;
+    var tiempo = parseInt(document.getElementById("tiempo").value);
+    var t_llegada = parseInt(document.getElementById("Tllegada").value);
+    
+    // Verifica si los campos están vacíos, si lo están, retorna sin hacer nada
+    if (nombre == "" || tiempo == "") {
+        return;
+    } else {
+        // Agrega los nuevos campos a la tabla y actualiza su contenido
+        contenido += `<input class="celda" type="text" id="nombre${id_tabla + 1}" value="${nombre}"><input class="celda" id="TLL${id_tabla + 1}" type="text" value="${t_llegada}" ><input class="celda" id="T${id_tabla + 1}" type="text" value="${tiempo}" ><input class="celda" id="TR${id_tabla + 1}" type="text" ><input class="celda" id="TE${id_tabla + 1}" type="text" ><br>`;
+        tabla.innerHTML = contenido; // Actualiza el contenido de la tabla con los nuevos campos
+        escribir("nombre", ""); // Limpia el campo 'nombre'
+        limpiar(); // Limpia otros campos
+        dibujarTab(); // Dibuja la tabla
+    }
+    
+    id_tabla++; // Incrementa el contador de tabla
+    repre_prosesamiento(); // Representación del procesamiento (no definido en el código proporcionado)
+}
+
+function FCFS() {
+    dibNombre(); // Funcion para mostrar los nombres de los procesos
+
+    // Inicialización de variables
+    var tiempoTotal = 0;
+    for (var i = 0; i < procesos.length; i++) {
+        tiempoTotal += procesos[i].T; // Calcula el tiempo total sumando la duración de todos los procesos
+    }
+    var pila = [], // Arreglo para simular la cola de procesos
+        datos = [], // Arreglo para almacenar datos de ejecución
+        orden = [], // Arreglo para mantener el orden de ejecución de procesos
+        TI = 0, // Tiempo inicial
+        ejecucion = 0, // Tiempo de ejecución actual
+        activo = false; // Variable de control (no utilizada en este código)
+
+    // Recorre el tiempo total
+    for (var i = 0; i < tiempoTotal; i++) {
+        // Recorre los procesos en la tabla
+        for (var j = 0; j < id_tabla; j++) {
+            // Verifica si un proceso llega en el tiempo actual 'i'
+            if (procesos[j].TLL == i) {
+                // Verifica si la pila (cola de procesos) está vacía
+                if (pila.length == 0) {
+                    ejecucion += i + procesos[j].T; // Suma el tiempo actual y la duración del proceso
+                    llegada = procesos[j].TLL; // Actualiza el tiempo de llegada
+                    TI = procesos[j].TLL; // Actualiza el tiempo inicial
+                } else {
+                    ejecucion += procesos[j].T; // Suma la duración del proceso al tiempo de ejecución
+                }
+                datos.push(ejecucion); // Almacena el tiempo de ejecución en el arreglo 'datos'
+                pila.push(procesos[j].nombre); // Agrega el nombre del proceso a la pila
+
+                // Marca gráficamente la ejecución del proceso en un diagrama
+                for (var a = procesos[j].TLL; a < ejecucion; a++) {
+                    marcarG(procesos[j].id, a + 1);
+                }
+
+                // Calcula y muestra el tiempo de respuesta (TR) y el tiempo de espera (TE) del proceso
+                escribir('TR' + procesos[j].id, ejecucion - procesos[j].TLL);
+                escribir('TE' + procesos[j].id, TI - procesos[j].TLL);
+
+                // Marca gráficamente el tiempo de respuesta del proceso en el diagrama
+                for (var a = procesos[j].TLL; a < TI; a++) {
+                    marcarR(procesos[j].id, a + 1);
+                }
+                TI = ejecucion; // Actualiza el tiempo inicial con el tiempo de ejecución
+
+                escribir("pila" + i, pila.join('\n')); // Muestra la pila en cada iteración
+            } else {
+                escribir("pila" + i, pila.join('\n')); // Muestra la pila en cada iteración
+            }
+            // Verifica si el primer dato en 'datos' es igual al tiempo actual 'i', si es así, elimina el primer dato de la pila y 'datos'
+            if (datos[0] == i) {
+                pila.shift(); // Elimina el primer elemento de la pila (cola de procesos)
+                datos.shift(); // Elimina el primer elemento de datos (tiempos de ejecución)
+                escribir("pila" + i, pila.join('\n')); // Muestra la pila en cada iteración
+            }
+        }
+    }
+    llenarTablaR(); // llenar tabla con datos obtenidos
+}
+
+
+// Algoritmo SJF 
+function SJF() {
+    dibNombre(); // Funcion para mostrar los nombres de los procesos
+    orden = [];
+    const procesosDuplicados = procesos.slice();
+
+    // Ordenar procesos por tiempo de ejecución
+    const res = ordenarProcesos(procesosDuplicados);
+
+    // Obtener información de tiempos y pilas
+    var datosG2 = res.datosG1.map(tiempo => tiempo);
+    var pilaG = res.pilaG1.map(tiempo => tiempo);
+    datosG3 = datosG2.filter((element) => typeof element === 'number');
+
+    var datosG = datosG3.slice();
+    datosG.shift();
+    var graf = buscar(pilaG[0]);
+
+    // Obtener el orden de los procesos según su ID
+    for (var i = 0; i < pilaG.length; i++) {
+        orden.push(buscarID(pilaG[i]));
+    }
+
+    // Marcar gráficamente la ejecución de los procesos
+    for (var i = 0; i < pilaG.length; i++) {
+        var mas = datosG2[i] + buscarT(pilaG[i]);
+        for (var j = graf; j < mas; j++) {
+            marcarG(orden[i], j + 1);
+            graf++;
+        }
+    }
+
+    datosG2.push(datosG2[datosG2.length - 1] + buscarT(pilaG[pilaG.length - 1]));
+
+    // Llenar una tabla con información de los procesos
+    var TET = llenarTabla(datosG, pilaG); // llenar tabla con datos obtenidos
+
+    var datosGT = datosG2.slice();
+
+    if (buscar(pilaG[0]) != 0) {
+        datosG.unshift(buscar(pilaG[0]));
+    } else {
+        datosG.unshift(0);
+    }
+
+    // Marcar gráficamente el tiempo de espera de los procesos
+    for (var i = 0; i < pilaG.length; i++) {
+        for (var j = buscar(pilaG[i]); j < datosGT[i]; j++) {
+            marcarR(orden[i], j + 1);
+        }
+    }
+}
+
+// Función para ordenar los procesos en base al tiempo de llegada y duración
+function ordenarProcesos(pila) {
+    const pilaG1 = [], datosG1 = []; // Arreglos para almacenar el orden y datos de ejecución respectivamente
+    var tiempo = 0; // Inicializa el tiempo en cero
+
+    // Mientras la pila de procesos no esté vacía
+    while (pila.length > 0) {
+        var procesoActual = null;
+
+        // Itera sobre la pila para encontrar el proceso disponible en el tiempo actual
+        for (var i = 0; i < pila.length; i++) {
+            if (pila[i].TLL <= tiempo) {
+                // Verifica si hay un proceso disponible y más corto que el actual
+                if (!procesoActual || pila[i].T < procesoActual.T) {
+                    procesoActual = pila[i]; // Asigna el proceso actual a aquel que se encontró más corto
+                }
+            }
+        }
+
+        // Si no se encontró un proceso disponible, se ajusta el tiempo al tiempo de llegada del primer proceso en la pila
+        if (!procesoActual) {
+            tiempo = pila[0].TLL;
+            continue;
+        }
+
+        // Agrega el nombre del proceso y su tiempo de inicio a los arreglos correspondientes
+        pilaG1.push(procesoActual.nombre);
+        datosG1.push(tiempo);
+
+        tiempo += procesoActual.T; // Incrementa el tiempo de acuerdo a la duración del proceso actual
+
+        pila.splice(pila.indexOf(procesoActual), 1); // Elimina el proceso actual de la pila
+    }
+
+    // Retorna los arreglos con el orden de ejecución y los tiempos de inicio de los procesos
+    return { pilaG1, datosG1 };
+}
+
+// Función para llenar la tabla FCFS
+function llenarTabla(datosG, pilaG) {
+    var TR = 0,
+        TE = 0,
+        promTR = 0,
+        promTE = 0,
+        TET = []; // Arreglo para almacenar los tiempos de espera de los procesos
+
+    // Itera sobre los procesos
+    for (var i = 0; i < procesos.length; i++) {
+        // Calcula el tiempo de respuesta TR de cada proceso
+        if (i == procesos.length - 1) {
+            TR = buscarT(pilaG[i]) + 1; // Último proceso, calcula TR de manera diferente
+            escribir('TR' + buscarID(pilaG[i]), TR);
+        } else {
+            TR = datosG[i] - buscar(pilaG[i]);
+            promTR += TR; // Suma TR para calcular el promedio
+            escribir('TR' + buscarID(pilaG[i]), TR);
+        }
+    }
+    promTR = promTR / procesos.length; // Calcula el promedio de TR
+    escribir('TRR', promTR.toFixed(2)); // Muestra el promedio de TR en la interfaz
+
+    // Verifica y ajusta la estructura de datos
+    if (buscar(pilaG[0]) != 0) {
+        datosG.unshift(buscar(pilaG[0]));
+    } else {
+        datosG.unshift(0);
+    }
+
+    // Itera sobre los procesos nuevamente
+    for (var i = 0; i < procesos.length; i++) {
+        // Calcula el tiempo de espera TE de cada proceso
+        TE = datosG[i] - buscar(pilaG[i]);
+        promTE += TE;
+        TET.push(TE); // Agrega el TE del proceso al arreglo de tiempos de espera
+        escribir('TE' + buscarID(pilaG[i]), TE);
+    }
+    promTE = promTE / procesos.length; // Calcula el promedio de TE
+    escribir('TER', promTE.toFixed(2)); // Muestra el promedio de TE en la interfaz
+
+    return TET; // Retorna el arreglo con los tiempos de espera de cada proceso
+}
+
+
+// Función para calcular los promedios de los tiempos de respuesta y espera y mostrarlos en la interfaz SJF
+function llenarTablaR() {
+    var TR = 0,
+        TE = 0,
+        promTR = 0,
+        promTE = 0,
+        TET = [];
+
+    // Recorre los procesos para sumar los tiempos de respuesta TR y espera TE
+    for (var i = 0; i < procesos.length; i++) {
+        var TRD = parseInt(document.getElementById(`TR${i + 1}`).value);
+        var TED = parseInt(document.getElementById(`TE${i + 1}`).value);
+        TR += TRD;
+        TE += TED;
+    }
+
+    // Calcula los promedios de TR y TE y los muestra en la interfaz
+    promTR = TR / procesos.length;
+    escribir('TRR', promTR.toFixed(2));
+    promTE = TE / procesos.length;
+    escribir('TER', promTE.toFixed(2));
+}
+
+// Función para buscar el tiempo de llegada TLL de un proceso según su nombre
+function buscar(tll) {
+    for (var i = 0; i < procesos.length; i++) {
+        if (procesos[i].nombre == tll) {
+            return procesos[i].TLL;
+        }
+    }
+}
+
+// Función para buscar la duración de un proceso según su nombre
+function buscarT(t) {
+    for (var i = 0; i < procesos.length; i++) {
+        if (procesos[i].nombre == t) {
+            return procesos[i].T;
+        }
+    }
+}
+
+// Función para buscar el ID de un proceso según su nombre
+function buscarID(t) {
+    for (var i = 0; i < procesos.length; i++) {
+        if (procesos[i].nombre == t) {
+            return procesos[i].id;
+        }
+    }
+}
+
+// Función para marcar la ejecución de un proceso en verde
+function marcarG(j, i) {
+    var temp = asignar_id(j, i);
+    temp.style.backgroundColor = "green";
+}
+
+// Función para marcar el tiempo de espera de un proceso en rojo
+function marcarR(j, i) {
+    var temp = asignar_id(j, i);
+    temp.style.backgroundColor = "red";
+}
+
+// Función para asignar un identificador a un elemento HTML
+function asignar_id(j, i) {
+    return document.getElementById("" + j + ":" + i + "");
+}
+
+// Función para escribir el nombre de los procesos en la interfaz
+function dibNombre() {
+    for (var i = 0; i < id_tabla; i++) {
+        escribir("nombre" + (i + 1) + "r", procesos[i].nombre);
+    }
+}
+function cambiarOpcion() {
+    var seleccion = document.getElementById("tipo");
+    var opcionSeleccionada = seleccion.options[seleccion.selectedIndex].value;
+
+    if (opcionSeleccionada === 'FCFS') {FCFS();} else if (opcionSeleccionada === 'SJF') {SJF();}
+}
+
+var tabla=document.getElementById('contenedor'), contenido = "", id_tabla = 0;
 
 var vistaN = document.getElementById("vistaN");
 var vistaD = document.getElementById("vistaD");
@@ -82,30 +396,13 @@ function escribir(a, t){document.getElementById(a).value=t;}
 function limpiar(){representacion="", repre_linea = ""; vistaD.innerHTML = representacion; vistaN.innerHTML=numeracion;}
 function actualizar(){location.reload();}
 
-function llenar(){procesos.splice(0, procesos.length);
-    for(var i= 1;i<=id_tabla;i++){
-        var nombre = document.getElementById("nombre"+i+"").value;
-        var t_llegada = parseInt(document.getElementById("TLL"+i+"").value);
-        var tiempo = parseInt(document.getElementById("T"+i+"").value);
-        var nuevoProceso = new Proceso(i,nombre, t_llegada, tiempo);
-        procesos.push(nuevoProceso); 
-    }
-    procesos.forEach(proceso => {console.log(`id: ${proceso.id},Nombre: ${proceso.nombre}, TLL: ${proceso.TLL}, T: ${proceso.T}`);});
+
+
+function repre_prosesamiento(){llenar(); 
+    var tipo = document.getElementById('tipo');
+    if(tipo.value == "FCFS"){FCFS();}else{SJF();}
 }
 
-function agregar(){
-    var nombre = document.getElementById("nombre").value;
-    var tiempo =parseInt(document.getElementById("tiempo").value);
-    var t_llegada = parseInt(document.getElementById("Tllegada").value);
-    if(nombre == ""|| tiempo == ""){return;}
-    else{
-        contenido +=`<input class="celda" type="text" id="nombre${id_tabla+1}" value="${nombre}"><input class="celda" id="TLL${id_tabla+1}" type="text" value="${t_llegada}" ><input class="celda" id="T${id_tabla+1}" type="text" value="${tiempo}" ><input class="celda" id="TR${id_tabla+1}" type="text" ><input class="celda" id="TE${id_tabla+1}" type="text" ><br>`;
-        tabla.innerHTML = contenido;
-        escribir("nombre", "");limpiar();
-        dibujarTab();
-    } id_tabla++; //procesos.push({ nombre, tiempo, t_llegada, tipo, id_tabla});
-    repre_prosesamiento();
-}
 
 function dibujarTab(){
   numeracion= celda_nom; 
@@ -123,201 +420,5 @@ function dibujarTab(){
     vistaD.innerHTML = representacion;
 }
 
-function repre_prosesamiento(){llenar(); 
-    var tipo = document.getElementById('tipo');
-    if(tipo.value == "FCFS"){FCFS();}else{SJF();}
-}
-
-function FCFS(){dibNombre();
-    var tiempoTotal=0;
-    for (var i = 0; i < procesos.length; i++) {tiempoTotal += procesos[i].T;}
-    var pila= [], datos=[], orden=[],TI=0; ejecucion = 0, activo=false;
-    
-    for(var i=0;i<tiempoTotal;i++){   
-        for(var j=0;j<id_tabla;j++){
-            if(procesos[j].TLL == i){
-                if(pila.length == 0){ejecucion += i+procesos[j].T; llegada=procesos[j].TLL; TI=procesos[j].TLL;}
-                else{ejecucion += procesos[j].T;}
-                datos.push(ejecucion); 
-                pila.push(procesos[j].nombre);
-                //orden.push(procesos[j].id);
-
-                for(var a=procesos[j].TLL;a<ejecucion;a++){marcarG(procesos[j].id, a+1);}
-                escribir('TR'+procesos[j].id,ejecucion-procesos[j].TLL);
-                escribir('TE'+procesos[j].id,TI-procesos[j].TLL);
-                for(var a=procesos[j].TLL;a<TI;a++){marcarR(procesos[j].id, a+1);}
-                TI=ejecucion;
-
-                escribir("pila"+i,pila.join('\n'));
-            }else{escribir("pila"+i,pila.join('\n'));}
-            if(datos[0]==i){pila.shift(); datos.shift(); escribir("pila"+i,pila.join('\n'));}
-        }
-    }
-    llenarTablaR();
-}
-
-function SJF(){dibNombre();
-    /*var tiempoTotal=0;
-
-    for (var i = 0; i < procesos.length; i++) {tiempoTotal += procesos[i].T;}
-    var pila= [], datos=[], ejecucion = 0;
-    var pilaG= [], datosG=[], orden=[], activo=false; 
-    
-    for(var i=0;i<tiempoTotal;i++){   
-        for(var j=0;j<id_tabla;j++){
-            if(procesos[j].TLL == i){
-                if(pila.length == 0){ejecucion += i+procesos[j].T;}
-                else{ejecucion += procesos[j].T;}
-                datos.push(ejecucion); 
-                pila.push(procesos[j].nombre);
-                orden.push(procesos[j].id);
-                datosG = datos.slice();
-                pilaG = pila.slice();
-
-                if(!activo){activo=true;
-                    
-                }
-
-                escribir("pila"+i,pila.join('\n'));
-            }else{escribir("pila"+i,pila.join('\n'));}
-            if(datos[0]==i){pila.shift(); datos.shift(); escribir("pila"+i,pila.join('\n'));}
-        }
-    }*/
-    orden=[];
-    const procesosDuplicados = procesos.slice();
-
-    const res = ordenarProcesos(procesosDuplicados);
-
-    var datosG2 = res.datosG1.map(tiempo => tiempo);
-    var pilaG = res.pilaG1.map(tiempo => tiempo);
-    datosG3 = datosG2.filter((element) => typeof element === 'number');
-
-    var datosG = datosG3.slice();
-    datosG.shift(); 
-    var graf = buscar(pilaG[0]);
-
-    for(var i = 0; i<pilaG.length;i++){orden.push(buscarID(pilaG[i]));}
-
-    for(var i = 0; i<pilaG.length;i++){var mas=datosG2[i] + buscarT(pilaG[i]); 
-        console.log(mas);
-        console.log(graf);
-        for(var j=graf;j<mas;j++){
-            marcarG(orden[i],j+1);graf++;
-        }
-    }
-
-    datosG2.push(datosG2[datosG2.length-1]+buscarT(pilaG[pilaG.length-1]));
-    /*console.log(datosG2[datosG2.length-1]);
-
-    console.log(datosG2);
-    console.log(datosG2[datosG2.length-1]+buscarT(pilaG[pilaG.length-1]));*/
-
-    var TET=llenarTabla(datosG,pilaG);
-    
-    var datosGT = datosG2.slice();
-
-    if(buscar(pilaG[0])!=0){datosG.unshift(buscar(pilaG[0]));}else{datosG.unshift(0);}
-
-    for(var i = 0; i<pilaG.length;i++){
-        for(var j=buscar(pilaG[i]);j<datosGT[i];j++){
-            marcarR(orden[i],j+1);
-        }
-    }
-}
-
-function ordenarProcesos(pila) {
-  const pilaG1 = []; 
-  const datosG1 = []; 
-  let tiempo = 0;
-
-  while (pila.length > 0) {
-    let procesoActual = null;
-
-    for (let i = 0; i < pila.length; i++) {
-      if (pila[i].TLL <= tiempo) {
-        if (!procesoActual || pila[i].T < procesoActual.T) {
-          procesoActual = pila[i];
-        }
-      }
-    }
-
-    if (!procesoActual) {
-      tiempo = pila[0].TLL;
-      continue;
-    }
-
-    pilaG1.push(procesoActual.nombre);
-    datosG1.push(tiempo);
-    tiempo += procesoActual.T;
-
-    pila.splice(pila.indexOf(procesoActual), 1);
-  }
-
-  return {
-    pilaG1,
-    datosG1
-  };
-}
-
-function buscar(tll){
-    for(var i = 0;i<procesos.length;i++){
-        if(procesos[i].nombre==tll){return procesos[i].TLL;}
-    }
-}
-
-function buscarT(t){
-    for(var i = 0;i<procesos.length;i++){
-        if(procesos[i].nombre==t){return procesos[i].T;}
-    }
-}
-
-function buscarID(t){
-    for(var i = 0;i<procesos.length;i++){
-        if(procesos[i].nombre==t){return procesos[i].id;}
-    }
-}
-
-function llenarTabla(datosG,pilaG){var TR=0, TE=0, promTR=0, promTE=0, TET=[];
-    console.log(datosG);
-    for(var i=0;i<procesos.length;i++){
-        if(i==procesos.length-1){
-            TR = buscarT(pilaG[i])+1;
-            console.log(TR);
-            escribir('TR'+buscarID(pilaG[i]),TR);
-        }
-        else{
-        TR = datosG[i]-buscar(pilaG[i]);
-        promTR+=TR; 
-        escribir('TR'+buscarID(pilaG[i]),TR);}
-    }
-    promTR = promTR/procesos.length; escribir('TRR',promTR.toFixed(2 )); 
-    if(buscar(pilaG[0])!=0){datosG.unshift(buscar(pilaG[0]));}else{datosG.unshift(0);}
-    
-    for(var i=0;i<procesos.length;i++){
-        TE = datosG[i]-buscar(pilaG[i]);
-        promTE+=TE; TET.push(TE);
-        escribir('TE'+buscarID(pilaG[i]),TE);
-    }
-    promTE = promTE/procesos.length; escribir('TER',promTE.toFixed(2)); 
-    return TET;
-}
-
-function llenarTablaR(){var TR=0, TE=0, promTR=0, promTE=0, TET=[];
-    for(var i = 0;i<procesos.length;i++){
-        var TRD = parseInt(document.getElementById(`TR${i+1}`).value);
-        var TED = parseInt(document.getElementById(`TE${i+1}`).value);
-        TR+=TRD;
-        TE+=TED;
-    }
-    promTR=TR/procesos.length; escribir('TRR',promTR.toFixed(2));
-    promTE=TE/procesos.length; escribir('TER',promTE.toFixed(2));
-}
-
-function marcarG(j,i){var temp = asignar_id(j, i); temp.style.backgroundColor = "green"; }
-function marcarR(j,i){var temp = asignar_id(j, i); temp.style.backgroundColor = "red"; }
-
-function asignar_id(j,i){return document.getElementById(""+j+":"+i+"");}
-
-function dibNombre(){for(var i=0;i<id_tabla;i++){escribir("nombre"+(i+1)+"r", procesos[i].nombre); }}
 </script>
 </html>

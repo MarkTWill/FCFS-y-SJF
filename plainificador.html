@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificador</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://kit.fontawesome.com/b3b702ac35.js" crossorigin="anonymous"></script>
+</head>
+<body class="b">
+    <div class="contenedor_general" onclick="actualizar()"><div class="est"><div class="estilos"></div></div></div>
+<br>
+<h2>Planificador de Procesos</h2>
+    <div class="row align-items-start">
+        <div class="col ">
+            <div class="contenedor_seleccion">
+                <label>Nombre de Proceso:&nbsp; </label><input type="text" id="nombre" >&nbsp;&nbsp;
+                <label>Tiempo de llegada:&nbsp;</label><input type="number" id="Tllegada" min="1">&nbsp;&nbsp;
+                <label>Tiempo de Ejecución: &nbsp;</label><input type="number" id="tiempo" value="5" min="1">&nbsp;&nbsp;
+                <label>Plan:&nbsp;</label>
+                <select class="opciones" id="tipo" onchange="cambiarOpcion()">
+                    <option value="FCFS" selected>FCFS</option>
+                    <option value="SJF">SJF</option>
+                </select>&nbsp;&nbsp;
+                
+                <button class="boton boton1" onclick="agregar()">Agregar Proceso <i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+      </div>
+      <div class="row align-items-start">
+        <div class="col">
+            <h4>Lista de procesos</h4>
+            <div class="tabla">
+                <div class="supe"><input class="celdaEN" type="text" value="Nombre" disabled><input class="celdaEN" type="text" value="Tiemp. Llegada" disabled><input class="celdaEN" type="text" value="Tiempo" disabled><input class="celdaEN" type="text" value="T. en proceso" disabled><input class="celdaEN" type="text" value="T. en espera" disabled></div>
+                <div class="contenedor" id="contenedor"></div>
+                <br><div class="supe"><input class="celdaEN" style="background-color: transparent;" type="text" disabled><input class="celdaEN" style="background-color: transparent;" type="text" disabled><input class="celdaEN" style="background-color: transparent;" type="text" ><input class="celdaEN" id="TRR" type="text" ><input class="celdaEN" id="TER" type="text" ></div>
+            </div>
+        </div>
+      </div>
+      <div class="row align-items-start">
+        <div class="col">
+            <div class="tabla" style="padding: 15px 10%;">
+                <div id="vista" class="vista">
+                    <div id="vistaD"></div>
+                    <div id="vistaN"></div><br>
+                    <div id="vistaP"></div>
+                </div>
+            </div>
+        </div>
+      </div>
+</body>
+<script>
+    function cambiarOpcion() {
+    var seleccion = document.getElementById("tipo");
+    var opcionSeleccionada = seleccion.options[seleccion.selectedIndex].value;
+
+    if (opcionSeleccionada === 'FCFS') {FCFS();} else if (opcionSeleccionada === 'SJF') {SJF();}
+}
+
+var tabla=document.getElementById('contenedor'), contenido = "", id_tabla = 0;
+
+
+class Proceso {
+  constructor(id_, nombre_, TLL_, T_) {
+    this.id = id_;
+    this.nombre = nombre_;
+    this.TLL = TLL_;
+    this.T = T_;
+  }
+}
+
+var procesos=[]; 
+
+var vistaN = document.getElementById("vistaN");
+var vistaD = document.getElementById("vistaD");
+var vistaP = document.getElementById("vistaP");
+var numeracion=celda_nom, celda_nom = `<input class="celda" style="width: 95px; border: none;" type="text" value="">`,celda_nom1 = `<input class="celda" style="background-color: transparent; width: 95px; border: none;" type="text" value="">`;;
+var representacion="", repre_linea = "";
+
+function escribir(a, t){document.getElementById(a).value=t;}
+function limpiar(){representacion="", repre_linea = ""; vistaD.innerHTML = representacion; vistaN.innerHTML=numeracion;}
+function actualizar(){location.reload();}
+
+function llenar(){procesos.splice(0, procesos.length);
+    for(var i= 1;i<=id_tabla;i++){
+        var nombre = document.getElementById("nombre"+i+"").value;
+        var t_llegada = parseInt(document.getElementById("TLL"+i+"").value);
+        var tiempo = parseInt(document.getElementById("T"+i+"").value);
+        var nuevoProceso = new Proceso(i,nombre, t_llegada, tiempo);
+        procesos.push(nuevoProceso); 
+    }
+    procesos.forEach(proceso => {console.log(`id: ${proceso.id},Nombre: ${proceso.nombre}, TLL: ${proceso.TLL}, T: ${proceso.T}`);});
+}
+
+function agregar(){
+    var nombre = document.getElementById("nombre").value;
+    var tiempo =parseInt(document.getElementById("tiempo").value);
+    var t_llegada = parseInt(document.getElementById("Tllegada").value);
+    if(nombre == ""|| tiempo == ""){return;}
+    else{
+        contenido +=`<input class="celda" type="text" id="nombre${id_tabla+1}" value="${nombre}"><input class="celda" id="TLL${id_tabla+1}" type="text" value="${t_llegada}" ><input class="celda" id="T${id_tabla+1}" type="text" value="${tiempo}" ><input class="celda" id="TR${id_tabla+1}" type="text" ><input class="celda" id="TE${id_tabla+1}" type="text" ><br>`;
+        tabla.innerHTML = contenido;
+        escribir("nombre", "");limpiar();
+        dibujarTab();
+    } id_tabla++; //procesos.push({ nombre, tiempo, t_llegada, tipo, id_tabla});
+    repre_prosesamiento();
+}
+
+function dibujarTab(){
+  numeracion= celda_nom; 
+  var pilaM=celda_nom1 
+    for(var i=0;i<=50;i++){numeracion += `<input class="celdaN" style="border: none;" type="text" id="num${i}" value="${i}">`}
+    vistaN.innerHTML=numeracion;
+    for(var i = 0;i<id_tabla+1;i++){
+      repre_linea = `<input class="celda" type="text" id="nombre${i+1}r">`;
+      for(var j = 0;j<50;j++){repre_linea+=`<input class="celdaN" type="text" id="${i+1}:${j+1}">`;}
+      repre_linea+=`<br>`; representacion +=repre_linea;
+    }
+    for(var i=0;i<=50;i++){pilaM += `<textarea class="celdaP" id="pila${i}"></textarea>`}
+    vistaP.innerHTML=pilaM;
+
+    vistaD.innerHTML = representacion;
+}
+
+function repre_prosesamiento(){llenar(); 
+    var tipo = document.getElementById('tipo');
+    if(tipo.value == "FCFS"){FCFS();}else{SJF();}
+}
+
+function FCFS(){dibNombre();
+    var tiempoTotal=0;
+    for (var i = 0; i < procesos.length; i++) {tiempoTotal += procesos[i].T;}
+    var pila= [], datos=[], orden=[],TI=0; ejecucion = 0, activo=false;
+    
+    for(var i=0;i<tiempoTotal;i++){   
+        for(var j=0;j<id_tabla;j++){
+            if(procesos[j].TLL == i){
+                if(pila.length == 0){ejecucion += i+procesos[j].T; llegada=procesos[j].TLL; TI=procesos[j].TLL;}
+                else{ejecucion += procesos[j].T;}
+                datos.push(ejecucion); 
+                pila.push(procesos[j].nombre);
+                //orden.push(procesos[j].id);
+
+                for(var a=procesos[j].TLL;a<ejecucion;a++){marcarG(procesos[j].id, a+1);}
+                escribir('TR'+procesos[j].id,ejecucion-procesos[j].TLL);
+                escribir('TE'+procesos[j].id,TI-procesos[j].TLL);
+                for(var a=procesos[j].TLL;a<TI;a++){marcarR(procesos[j].id, a+1);}
+                TI=ejecucion;
+
+                escribir("pila"+i,pila.join('\n'));
+            }else{escribir("pila"+i,pila.join('\n'));}
+            if(datos[0]==i){pila.shift(); datos.shift(); escribir("pila"+i,pila.join('\n'));}
+        }
+    }
+    llenarTablaR();
+}
+
+function SJF(){dibNombre();
+    /*var tiempoTotal=0;
+
+    for (var i = 0; i < procesos.length; i++) {tiempoTotal += procesos[i].T;}
+    var pila= [], datos=[], ejecucion = 0;
+    var pilaG= [], datosG=[], orden=[], activo=false; 
+    
+    for(var i=0;i<tiempoTotal;i++){   
+        for(var j=0;j<id_tabla;j++){
+            if(procesos[j].TLL == i){
+                if(pila.length == 0){ejecucion += i+procesos[j].T;}
+                else{ejecucion += procesos[j].T;}
+                datos.push(ejecucion); 
+                pila.push(procesos[j].nombre);
+                orden.push(procesos[j].id);
+                datosG = datos.slice();
+                pilaG = pila.slice();
+
+                if(!activo){activo=true;
+                    
+                }
+
+                escribir("pila"+i,pila.join('\n'));
+            }else{escribir("pila"+i,pila.join('\n'));}
+            if(datos[0]==i){pila.shift(); datos.shift(); escribir("pila"+i,pila.join('\n'));}
+        }
+    }*/
+    orden=[];
+    const procesosDuplicados = procesos.slice();
+
+    const res = ordenarProcesos(procesosDuplicados);
+
+    var datosG2 = res.datosG1.map(tiempo => tiempo);
+    var pilaG = res.pilaG1.map(tiempo => tiempo);
+    datosG3 = datosG2.filter((element) => typeof element === 'number');
+
+    var datosG = datosG3.slice();
+    datosG.shift(); 
+    var graf = buscar(pilaG[0]);
+
+    for(var i = 0; i<pilaG.length;i++){orden.push(buscarID(pilaG[i]));}
+
+    for(var i = 0; i<pilaG.length;i++){var mas=datosG2[i] + buscarT(pilaG[i]); 
+        console.log(mas);
+        console.log(graf);
+        for(var j=graf;j<mas;j++){
+            marcarG(orden[i],j+1);graf++;
+        }
+    }
+
+    datosG2.push(datosG2[datosG2.length-1]+buscarT(pilaG[pilaG.length-1]));
+    /*console.log(datosG2[datosG2.length-1]);
+
+    console.log(datosG2);
+    console.log(datosG2[datosG2.length-1]+buscarT(pilaG[pilaG.length-1]));*/
+
+    var TET=llenarTabla(datosG,pilaG);
+    
+    var datosGT = datosG2.slice();
+
+    if(buscar(pilaG[0])!=0){datosG.unshift(buscar(pilaG[0]));}else{datosG.unshift(0);}
+
+    for(var i = 0; i<pilaG.length;i++){
+        for(var j=buscar(pilaG[i]);j<datosGT[i];j++){
+            marcarR(orden[i],j+1);
+        }
+    }
+}
+
+function ordenarProcesos(pila) {
+  const pilaG1 = []; 
+  const datosG1 = []; 
+  let tiempo = 0;
+
+  while (pila.length > 0) {
+    let procesoActual = null;
+
+    for (let i = 0; i < pila.length; i++) {
+      if (pila[i].TLL <= tiempo) {
+        if (!procesoActual || pila[i].T < procesoActual.T) {
+          procesoActual = pila[i];
+        }
+      }
+    }
+
+    if (!procesoActual) {
+      tiempo = pila[0].TLL;
+      continue;
+    }
+
+    pilaG1.push(procesoActual.nombre);
+    datosG1.push(tiempo);
+    tiempo += procesoActual.T;
+
+    pila.splice(pila.indexOf(procesoActual), 1);
+  }
+
+  return {
+    pilaG1,
+    datosG1
+  };
+}
+
+function buscar(tll){
+    for(var i = 0;i<procesos.length;i++){
+        if(procesos[i].nombre==tll){return procesos[i].TLL;}
+    }
+}
+
+function buscarT(t){
+    for(var i = 0;i<procesos.length;i++){
+        if(procesos[i].nombre==t){return procesos[i].T;}
+    }
+}
+
+function buscarID(t){
+    for(var i = 0;i<procesos.length;i++){
+        if(procesos[i].nombre==t){return procesos[i].id;}
+    }
+}
+
+function llenarTabla(datosG,pilaG){var TR=0, TE=0, promTR=0, promTE=0, TET=[];
+    console.log(datosG);
+    for(var i=0;i<procesos.length;i++){
+        if(i==procesos.length-1){
+            TR = buscarT(pilaG[i])+1;
+            console.log(TR);
+            escribir('TR'+buscarID(pilaG[i]),TR);
+        }
+        else{
+        TR = datosG[i]-buscar(pilaG[i]);
+        promTR+=TR; 
+        escribir('TR'+buscarID(pilaG[i]),TR);}
+    }
+    promTR = promTR/procesos.length; escribir('TRR',promTR.toFixed(2 )); 
+    if(buscar(pilaG[0])!=0){datosG.unshift(buscar(pilaG[0]));}else{datosG.unshift(0);}
+    
+    for(var i=0;i<procesos.length;i++){
+        TE = datosG[i]-buscar(pilaG[i]);
+        promTE+=TE; TET.push(TE);
+        escribir('TE'+buscarID(pilaG[i]),TE);
+    }
+    promTE = promTE/procesos.length; escribir('TER',promTE.toFixed(2)); 
+    return TET;
+}
+
+function llenarTablaR(){var TR=0, TE=0, promTR=0, promTE=0, TET=[];
+    for(var i = 0;i<procesos.length;i++){
+        var TRD = parseInt(document.getElementById(`TR${i+1}`).value);
+        var TED = parseInt(document.getElementById(`TE${i+1}`).value);
+        TR+=TRD;
+        TE+=TED;
+    }
+    promTR=TR/procesos.length; escribir('TRR',promTR.toFixed(2));
+    promTE=TE/procesos.length; escribir('TER',promTE.toFixed(2));
+}
+
+function marcarG(j,i){var temp = asignar_id(j, i); temp.style.backgroundColor = "green"; }
+function marcarR(j,i){var temp = asignar_id(j, i); temp.style.backgroundColor = "red"; }
+
+function asignar_id(j,i){return document.getElementById(""+j+":"+i+"");}
+
+function dibNombre(){for(var i=0;i<id_tabla;i++){escribir("nombre"+(i+1)+"r", procesos[i].nombre); }}
+</script>
+</html>
